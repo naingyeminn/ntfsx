@@ -1,0 +1,100 @@
+#!/bin/bash
+
+setDrive() {
+	uuid=$(diskutil info "$volume" | grep UUID | cut -d ':' -f2 | tr -d ' ')
+	volumeName=$(diskutil info "$volume" | grep "Volume Name" | cut -d ':' -f2 | tr -d ' ')
+	if [ "$uuid" = "" ]; then
+		drive="LABEL=${volumeName// /\\040} none ntfs rw,auto,nobrowse #${volumeName// /}"
+	else
+		drive="UUID=$uuid none ntfs rw,auto,nobrowse #${volumeName// /}"
+	fi
+}
+
+setupDrive() {
+	echo $drive >> /etc/fstab
+	device=$(diskutil info "$volume" | grep "Device Node" | cut -d ':' -f2 | tr -d ' ')
+	diskutil unmount "$volume"
+	diskutil mount $device
+}
+
+manualAdd() {
+	setDrive
+	while read fileLine; do
+		if [ "$drive" = "$fileLine" ]; then
+			echo "$volume already configured."
+			exit 0;
+		fi
+	done < /etc/fstab
+	setupDrive
+	open "$volume"
+}
+
+autoAdd() {
+	setDrive
+	while read fileLine; do
+		if [ "$drive" = "$fileLine" ]; then
+			echo "$volume already configured."
+			return 1;
+		fi
+	done < /etc/fstab
+	if [ "$?" -ne 1 ]; then
+		echo "New Drive $volume is added."
+		echo $drive >> /etc/fstab
+		device=$(diskutil info "$volume" | grep "Device Node" | cut -d ':' -f2 | tr -d ' ')
+		diskutil unmount "$volume"
+		diskutil mount $device
+	fi
+}
+
+checkDrive() {
+	filetype=$(diskutil info "$volume" | grep "Type (Bundle):" | cut -d ':' -f2 | tr -d ' ')
+	if [ "$filetype" = "ntfs" ]; then
+		if [ "$1" = "auto" ]; then
+			autoAdd
+		else
+			manualAdd
+		fi
+	fi
+}
+
+addDriveAuto() {
+	for volume in "/Volumes"/*
+	do
+		checkDrive auto
+	done
+}
+
+addDrive() {
+	select volume in "/Volumes"/*
+	do
+		case "$volume" in
+			"$QUIT")
+				echo "Exiting..."
+				break
+				;;
+			*)
+				echo "You picked "$volume" "
+				checkDrive
+				;;
+		esac
+	done
+}
+
+if [ -z $1 ]; then
+	addDriveAuto
+else
+	case $1 in
+		-a|add)
+			addDrive
+			;;
+		-r|remove)
+			removeDrive
+			;;
+		-h|--help|help)
+			usage
+			;;
+		*)
+			usage
+			;;
+	esac
+fi
