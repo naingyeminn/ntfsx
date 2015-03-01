@@ -80,21 +80,59 @@ addDrive() {
 	done
 }
 
-if [ -z $1 ]; then
-	addDriveAuto
+listDrive() {
+	while read fileLine; do
+		dname=($(echo "$fileLine" | awk '{print $NF}'))
+		drives+=(${dname//#/})
+	done < /etc/fstab
+	select drive in ${drives[@]}
+	do
+		case "$drive" in
+			"$QUIT")
+				echo "Exiting."
+				break
+				;;
+			*)
+				echo "You picked "$drive" to remove"
+				break
+				;;
+		esac
+	done
+}
+
+removeDrive() {
+	listDrive
+	sed -i.bak "/$drive/d" /etc/fstab
+	rm /etc/fstab.bak
+}
+
+usage() {
+	echo "Usage : $0 [-h|--help|help] [-a|add] [-r|remove]"
+	echo "-h | --help | help : Help. Display this message and quit."
+	echo "-a | add           : Add new NTFS Drives to fstab."
+	echo "-r | remove        : Remove NTFS Drives from fstab."
+	exit
+}
+
+if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+	echo "This script need to run as ROOT. Try sudo."
 else
-	case $1 in
-		-a|add)
-			addDrive
-			;;
-		-r|remove)
-			removeDrive
-			;;
-		-h|--help|help)
-			usage
-			;;
-		*)
-			usage
-			;;
-	esac
+	if [ -z $1 ]; then
+		addDriveAuto
+	else
+		case $1 in
+			-a|add)
+				addDrive
+				;;
+			-r|remove)
+				removeDrive
+				;;
+			-h|--help|help)
+				usage
+				;;
+			*)
+				usage
+				;;
+		esac
+	fi
 fi
