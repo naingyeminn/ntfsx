@@ -4,9 +4,9 @@ setDrive() {
 	uuid=$(diskutil info "$volume" | grep UUID | cut -d ':' -f2 | tr -d ' ')
 	volumeName=$(diskutil info "$volume" | grep "Volume Name" | cut -d ':' -f2 | tr -d ' ')
 	if [ "$uuid" = "" ]; then
-		drive="LABEL=${volumeName// /\\040} none ntfs rw,auto,nobrowse #${volumeName// /}"
+		drive="LABEL=${volumeName// /\\040} none ntfs rw,auto,nobrowse #$volumeName"
 	else
-		drive="UUID=$uuid none ntfs rw,auto,nobrowse #${volumeName// /}"
+		drive="UUID=$uuid none ntfs rw,auto,nobrowse #$volumeName"
 	fi
 }
 
@@ -82,18 +82,20 @@ addDrive() {
 
 listDrive() {
 	while read fileLine; do
-		dname=($(echo "$fileLine" | awk '{print $NF}'))
-		drives+=(${dname//#/})
+		fileLine=$(echo "$fileLine" | grep -v ^"#" | grep "#")
+		if [ "$fileLine" != "" ]; then
+			drives+=("${fileLine##*\#}")
+		fi
 	done < /etc/fstab
-	select drive in ${drives[@]}
+	select drive in "${drives[@]}"
 	do
 		case "$drive" in
 			"$QUIT")
 				echo "Exiting."
-				break
+				exit
 				;;
 			*)
-				echo "You picked "$drive" to remove"
+				echo "You picked "$drive" to remove."
 				break
 				;;
 		esac
@@ -101,16 +103,30 @@ listDrive() {
 }
 
 removeDrive() {
-	listDrive
-	sed -i.bak "/$drive/d" /etc/fstab
-	rm /etc/fstab.bak
+	if [ "$1" = "all" ]; then
+		echo "Removed all from fstab"
+		while read fileLine; do
+			fileLine=$(echo "$fileLine" | grep -v ^"#" | grep "#")
+			if [ "$fileLine" != "" ]; then
+				sed -i.bak "/${fileLine##*\#}/d" /etc/fstab
+				rm /etc/fstab.bak
+			fi
+		done < /etc/fstab
+	else
+		listDrive
+		sed -i.bak "/$drive/d" /etc/fstab
+		if [ -f "/etc/fstab.bak" ];then
+			rm /etc/fstab.bak
+		fi
+	fi
 }
 
 usage() {
 	echo "Usage : $0 [-h|--help|help] [-a|add] [-r|remove]"
 	echo "-h | --help | help : Help. Display this message and quit."
-	echo "-a | add           : Add new NTFS Drives to fstab."
+	echo "-a | add           : Add new NTFS Drives to fstab manually."
 	echo "-r | remove        : Remove NTFS Drives from fstab."
+	echo "-R | removeall    : Remove all Drives from fstab."
 	exit
 }
 
@@ -126,6 +142,9 @@ else
 				;;
 			-r|remove)
 				removeDrive
+				;;
+			-R|removeall)
+				removeDrive all
 				;;
 			-h|--help|help)
 				usage
