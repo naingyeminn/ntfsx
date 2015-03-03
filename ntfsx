@@ -80,7 +80,7 @@ addDrive() {
 	done
 }
 
-listDrive() {
+singleRemove() {
 	while read fileLine; do
 		fileLine=$(echo "$fileLine" | grep -v ^"#" | grep "#")
 		if [ "$fileLine" != "" ]; then
@@ -96,28 +96,31 @@ listDrive() {
 				;;
 			*)
 				echo "You picked "$drive" to remove."
-				break
+				sed -i.bak "/$drive/d" /etc/fstab
+				if [ -f "/etc/fstab.bak" ];then
+					rm /etc/fstab.bak
+				fi
 				;;
 		esac
 	done
 }
 
-removeDrive() {
-	if [ "$1" = "all" ]; then
-		echo "Removed all from fstab"
-		while read fileLine; do
-			fileLine=$(echo "$fileLine" | grep -v ^"#" | grep "#")
-			if [ "$fileLine" != "" ]; then
-				sed -i.bak "/${fileLine##*\#}/d" /etc/fstab
-				rm /etc/fstab.bak
-			fi
-		done < /etc/fstab
-	else
-		listDrive
-		sed -i.bak "/$drive/d" /etc/fstab
-		if [ -f "/etc/fstab.bak" ];then
+allRemove() {
+	echo "Removed all from fstab"
+	while read fileLine; do
+		fileLine=$(echo "$fileLine" | grep -v ^"#" | grep "#")
+		if [ "$fileLine" != "" ]; then
+			sed -i.bak "/${fileLine##*\#}/d" /etc/fstab
 			rm /etc/fstab.bak
 		fi
+	done < /etc/fstab
+}
+
+removeDrive() {
+	if [ "$1" = "all" ]; then
+		allRemove
+	else
+		singleRemove
 	fi
 }
 
