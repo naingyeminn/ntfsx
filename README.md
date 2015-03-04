@@ -60,6 +60,7 @@ $ sudo ntfsx add
 ```
 
 * Select drive number you want to add and press Enter.
+* The Drive will be opened up in new **Finder** window.
 * Type **Quit** or **Exit** to end process.
 
 #### Auto Add
@@ -69,7 +70,7 @@ $ sudo ntfsx add
 ```sh
 $ sudo ntfsx
 ```
-
+* `ntfsx` will find NTFS formatted Drives you connected and mount all these Drives with write permission.
 * You will not see the drive in Finder's *Devices*.
 * Open **Finder** and nagivates to **Go > Go to Folder...** Menu or press **Shift + Command + G**.
 * Type `/Volumes` and press enter.
