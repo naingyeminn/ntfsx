@@ -39,10 +39,7 @@ autoAdd() {
 	done < /etc/fstab
 	if [ "$?" -ne 1 ]; then
 		echo "New Drive $volume is added."
-		echo $drive >> /etc/fstab
-		device=$(diskutil info "$volume" | grep "Device Node" | cut -d ':' -f2 | tr -d ' ')
-		diskutil unmount "$volume"
-		diskutil mount $device
+		setupDrive
 	fi
 }
 
@@ -54,6 +51,8 @@ checkDrive() {
 		else
 			manualAdd
 		fi
+	else
+		echo "$volume is not an NTFS drive."
 	fi
 }
 
@@ -138,6 +137,7 @@ if [[ $(/usr/bin/id -u) -ne 0 ]]; then
 else
 	if [ -z $1 ]; then
 		addDriveAuto
+		open "/Volumes/"
 	else
 		case $1 in
 			-a|add)
